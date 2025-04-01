@@ -1,71 +1,72 @@
-# By Michael
-#-----------------------------------------
-from flask import Flask, app
-app = Flask(__name__)
-#-----------------------------------------
-
-# imports all words from english_words library
+from flask import Flask, request, jsonify, render_template
 import random as rand
 from english_words import get_english_words_set
 
+app = Flask(__name__)
+
+# Load words dataset
 allWords = get_english_words_set(['web2'], alpha=True, lower=True)
+wordList = [word for word in allWords if len(word) == 4]
+word = rand.choice(wordList)
+
+# Store guess history
+guess_history = []
 
 
 @app.route('/')
-def main():
-    # variables
-    count = 6
-    i = 0
-    j = 0
-    k = 0
-    wordChecker = []
+def home():
+    return render_template('index.html')
 
 
-    lettersRemain = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-                 'u', 'v', 'w', 'x', 'y', 'z']
-    # files through all words and appends only 4 letter words (the for loop does that below)
-    wordList = []
+@app.route('/guess', methods=['POST'])
+def guess():
+    data = request.get_json()
+    yourWord = data.get("word", "").lower()
 
-    # creating a list of all four letter words from english_words
-    for word in allWords:
-        if len(word) == 4:
-            wordList.append(word)
+    if len(yourWord) != 4:
+        return jsonify({"error": "Please enter a valid 4-letter word."}), 400
 
-    word = rand.choice(wordList)
-    while count > 0:
-        print('You have ', count, ' attempts left')
-        yourWord = input('enter a four letter word: ')
-        while len(yourWord) != 4:
-            print('enter a valid 4 letter word.')
-            yourWord = input('enter a four letter word: ')
-        print(yourWord)
-        print('comparing words!')
-        while i < len(yourWord):
-            if yourWord[i] == word[i]:
-                wordChecker.append(yourWord[i])
-            elif yourWord[i] in word:
-                print('the letter(s)', yourWord[i], 'was found in the word but may be in the wrong place')
-                wordChecker.append('_')
-            else:
-                if yourWord[i] in lettersRemain:
-                    lettersRemain.remove(yourWord[i])
-                wordChecker.append('_')
-            i += 1
+    # Improved hint logic
+    word_hint = []
+    word_copy = list(word)  # Copy to track used letters
 
-        print('these letters remain: ', lettersRemain)
-        print(wordChecker)
-        count -= 1
-        # compares your answer to the list
-        compare = ''.join(wordChecker)
-        if yourWord == compare:
-            print('Nice job!')
-            break
-        if count == 0:
-            print('the word was', word)
+    # First pass: mark exact matches
+    for i in range(4):
+        if yourWord[i] == word[i]:
+            word_hint.append(yourWord[i])  # Correct letter & position
+            word_copy[i] = None  # Mark as used
         else:
-            wordChecker.clear()
-            i = 0
-            # print(wordChecker)
+            word_hint.append(None)  # Placeholder
+
+    # Second pass: mark partial matches
+    for i in range(4):
+        if word_hint[i] is None:  # Not an exact match
+            if yourWord[i] in word_copy:
+                word_hint[i] = "_"  # In word but wrong position
+                word_copy[word_copy.index(yourWord[i])] = None  # Mark as used
+            else:
+                word_hint[i] = "X"  # Not in word
+
+    # Store this guess in history
+    guess_history.append({
+        "guess": yourWord,
+        "hint": word_hint
+    })
+
+    return jsonify({
+        "your_guess": yourWord,
+        "word_hint": word_hint,
+        "guess_history": guess_history
+    })
+
+
+@app.route('/reset', methods=['POST'])
+def reset_game():
+    global word, guess_history
+    word = rand.choice(wordList)
+    guess_history = []
+    return jsonify({"message": "Game reset with new word"})
+
 
 if __name__ == '__main__':
     app.run(debug=True)

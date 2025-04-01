@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Letter Wordle Game</title>
+    <style>
+        :root {
+            --color-correct: #6aaa64;
+            --color-present: #c9b458;
+            --color-absent: #787c7e;
+            --color-keyboard: #d3d6da;
+            --font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            --border-radius: 4px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: white;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+            border-bottom: 1px solid #d3d6da;
+            margin-bottom: 20px;
+            padding-left: 90px;
+            padding-bottom: 30px;
+            padding-top: 30px;
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: 28px;
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+            text-align: center;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            height: calc(100% - 150px);
+            padding-top: 30px;
+        }
+
+        .tile-container {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 30px;
+        }
+
+        .tile-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        .tile {
+            width: 62px;
+            height: 62px;
+            border: 2px solid #d3d6da;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .correct {
+            background-color: var(--color-correct);
+            border-color: var(--color-correct);
+            color: white;
+        }
+
+        .present {
+            background-color: var(--color-present);
+            border-color: var(--color-present);
+            color: white;
+        }
+
+        .absent {
+            background-color: var(--color-absent);
+            border-color: var(--color-absent);
+            color: white;
+        }
+
+        .keyboard {
+            width: 100%;
+            max-width: 484px;
+            margin: 0 auto;
+            margin-top: 10px;
+        }
+
+        .keyboard-row {
+            display: flex;
+            width: 100%;
+            margin: 0 auto 8px;
+            touch-action: manipulation;
+        }
+
+        .keyboard-button {
+            font-family: inherit;
+            font-weight: bold;
+            border: 0;
+            padding: 0;
+            margin: 0 6px 0 0;
+            height: 58px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--color-keyboard);
+            color: #1a1a1b;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-transform: uppercase;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.3);
+        }
+
+        .keyboard-button:last-of-type {
+            margin: 0;
+        }
+
+        .keyboard-button.wide {
+            flex: 1.5;
+            font-size: 12px;
+        }
+
+        .keyboard-button.correct {
+            background-color: var(--color-correct);
+        }
+
+        .keyboard-button.present {
+            background-color: var(--color-present);
+        }
+
+        .keyboard-button.absent {
+            background-color: var(--color-absent);
+        }
+
+        .modal {
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            width: 90%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 23px 0 rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            padding: 16px;
+            display: none;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal-header {
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-content {
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .modal-examples {
+            border-bottom: 1px solid #d3d6da;
+            border-top: 1px solid #d3d6da;
+            padding: 15px 0;
+        }
+
+        .example {
+            margin-bottom: 10px;
+        }
+
+        .example-tiles {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+
+        .example-tile {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #d3d6da;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .button {
+            background-color: #6aaa64;
+            color: white;
+            font-family: inherit;
+            font-weight: bold;
+            border: 0;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .reset-button {
+            background-color: #f5793a;
+            color: white;
+            font-family: inherit;
+            font-weight: bold;
+            border: 0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .header-button {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border: 2px solid #d3d6da;
+            border-radius: 50%;
+            color: #787c7e;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        .message-container {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            border-radius: 4px;
+            padding: 12px 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .message-container.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay"></div>
+    <div class="modal" id="instructions-modal">
+        <div class="modal-header">How to Play</div>
+        <div class="modal-content">
+            Guess the 4-letter WORD in 6 tries.<br>
+            Each guess must be a valid 4-letter word.<br>
+            After each guess, the color of the tiles will change to show how close your guess was to the word.
+        </div>
+        <div class="modal-examples">
+            <div class="example">
+                <div>Examples:</div>
+                <div class="example-tiles">
+                    <div class="example-tile correct">P</div>
+                    <div class="example-tile">L</div>
+                    <div class="example-tile">A</div>
+                    <div class="example-tile">Y</div>
+                </div>
+                <div>
+                    The letter P is in the word and in the correct spot.
+                </div>
+            </div>
+            <div class="example">
+                <div class="example-tiles">
+                    <div class="example-tile">W</div>
+                    <div class="example-tile present">O</div>
+                    <div class="example-tile">R</div>
+                    <div class="example-tile">D</div>
+                </div>
+                <div>
+                    The letter O is in the word but in the wrong spot.
+                </div>
+            </div>
+            <div class="example">
+                <div class="example-tiles">
+                    <div class="example-tile">V</div>
+                    <div class="example-tile">I</div>
+                    <div class="example-tile absent">B</div>
+                    <div class="example-tile">E</div>
+                </div>
+                <div>
+                    The letter B is not in the word in any spot.
+                </div>
+            </div>
+        </div>
+        <div class="button-row">
+            <button class="button" id="close-instructions">Got it!</button>
+        </div>
+    </div>
+
+    <div class="message-container" id="message"></div>
+
+    <header>
+        <div class="header-button" id="info-button">?</div>
+        <h1>Word Battle</h1>
+        <button class="reset-button" id="reset-button">New Game</button>
+    </header>
+
+    <div class="game-container">
+        <div class="tile-container" id="board">
+            <!-- Rows will be created by JavaScript -->
+        </div>
+
+        <div class="keyboard" id="keyboard">
+            <div class="keyboard-row">
+                <button class="keyboard-button" data-key="q">q</button>
+                <button class="keyboard-button" data-key="w">w</button>
+                <button class="keyboard-button" data-key="e">e</button>
+                <button class="keyboard-button" data-key="r">r</button>
+                <button class="keyboard-button" data-key="t">t</button>
+                <button class="keyboard-button" data-key="y">y</button>
+                <button class="keyboard-button" data-key="u">u</button>
+                <button class="keyboard-button" data-key="i">i</button>
+                <button class="keyboard-button" data-key="o">o</button>
+                <button class="keyboard-button" data-key="p">p</button>
+            </div>
+            <div class="keyboard-row">
+                <div style="flex: 0.5"></div>
+                <button class="keyboard-button" data-key="a">a</button>
+                <button class="keyboard-button" data-key="s">s</button>
+                <button class="keyboard-button" data-key="d">d</button>
+                <button class="keyboard-button" data-key="f">f</button>
+                <button class="keyboard-button" data-key="g">g</button>
+                <button class="keyboard-button" data-key="h">h</button>
+                <button class="keyboard-button" data-key="j">j</button>
+                <button class="keyboard-button" data-key="k">k</button>
+                <button class="keyboard-button" data-key="l">l</button>
+                <div style="flex: 0.5"></div>
+            </div>
+            <div class="keyboard-row">
+                <button class="keyboard-button wide" data-key="enter">enter</button>
+                <button class="keyboard-button" data-key="z">z</button>
+                <button class="keyboard-button" data-key="x">x</button>
+                <button class="keyboard-button" data-key="c">c</button>
+                <button class="keyboard-button" data-key="v">v</button>
+                <button class="keyboard-button" data-key="b">b</button>
+                <button class="keyboard-button" data-key="n">n</button>
+                <button class="keyboard-button" data-key="m">m</button>
+                <button class="keyboard-button wide" data-key="backspace">←</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let currentRow = 0;
+        let currentTile = 0;
+        let gameOver = false;
+        let guessedWord = '';
+
+        // Initialize the game board
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBoard();
+            setupKeyboardListeners();
+            setupModalListeners();
+
+            // Show instructions on first load
+            showInstructions();
+
+            // Add reset button listener
+            document.getElementById('reset-button').addEventListener('click', resetGame);
+        });
+
+        function initializeBoard() {
+            const board = document.getElementById('board');
+            // Create 6 rows with 4 tiles each
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('div');
+                row.classList.add('tile-row');
+
+                for (let j = 0; j < 4; j++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.dataset.row = i;
+                    tile.dataset.col = j;
+                    row.appendChild(tile);
+                }
+
+                board.appendChild(row);
+            }
+        }
+
+        function setupKeyboardListeners() {
+            // Physical keyboard
+            document.addEventListener('keydown', handleKeyPress);
+
+            // On-screen keyboard
+            const keyboardButtons = document.querySelectorAll('.keyboard-button');
+            keyboardButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const key = button.getAttribute('data-key');
+                    handleInput(key);
+                });
+            });
+        }
+
+        function setupModalListeners() {
+            document.getElementById('info-button').addEventListener('click', showInstructions);
+            document.getElementById('close-instructions').addEventListener('click', hideInstructions);
+            document.getElementById('overlay').addEventListener('click', hideInstructions);
+        }
+
+        function handleKeyPress(e) {
+            if (gameOver) return;
+
+            if (e.key === 'Enter') {
+                submitGuess();
+            } else if (e.key === 'Backspace') {
+                deleteLetter();
+            } else if (/^[a-zA-Z]$/.test(e.key)) {
+                addLetter(e.key.toLowerCase());
+            }
+        }
+
+        function handleInput(key) {
+            if (gameOver) return;
+
+            if (key === 'enter') {
+                submitGuess();
+            } else if (key === 'backspace') {
+                deleteLetter();
+            } else {
+                addLetter(key);
+            }
+        }
+
+        function addLetter(letter) {
+            if (currentTile < 4 && currentRow < 6) {
+                const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${currentTile}"]`);
+                tile.textContent = letter.toUpperCase();
+                guessedWord += letter;
+                currentTile++;
+            }
+        }
+
+        function deleteLetter() {
+            if (currentTile > 0) {
+                currentTile--;
+                const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${currentTile}"]`);
+                tile.textContent = '';
+                guessedWord = guessedWord.slice(0, -1);
+            }
+        }
+
+        function submitGuess() {
+            if (currentTile !== 4) {
+                showMessage("Not enough letters");
+                return;
+            }
+
+            // Send the guess to the server
+            fetch("/guess", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ word: guessedWord })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showMessage(data.error);
+                } else {
+                    updateBoard(data);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                showMessage("An error occurred");
+            });
+        }
+
+        function updateBoard(data) {
+            const hints = data.word_hint;
+            let isWin = true;
+
+            // Update tiles in current row
+            for (let i = 0; i < 4; i++) {
+                const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${i}"]`);
+                const letter = guessedWord[i];
+                const keyboardKey = document.querySelector(`.keyboard-button[data-key="${letter}"]`);
+
+                // Add animation delay
+                setTimeout(() => {
+                    if (hints[i] === guessedWord[i]) {
+                        tile.classList.add('correct');
+                        keyboardKey.classList.add('correct');
+                    } else if (hints[i] === '_') {
+                        tile.classList.add('present');
+                        if (!keyboardKey.classList.contains('correct')) {
+                            keyboardKey.classList.add('present');
+                        }
+                        isWin = false;
+                    } else {
+                        tile.classList.add('absent');
+                        if (!keyboardKey.classList.contains('correct') &&
+                            !keyboardKey.classList.contains('present')) {
+                            keyboardKey.classList.add('absent');
+                        }
+                        isWin = false;
+                    }
+                }, i * 250);
+            }
+
+            // Check win condition
+            setTimeout(() => {
+                if (isWin) {
+                    gameOver = true;
+                    showMessage("You win! 🎉");
+                } else if (currentRow === 5) {
+                    gameOver = true;
+                    showMessage("Game over!");
+                } else {
+                    currentRow++;
+                    currentTile = 0;
+                    guessedWord = '';
+                }
+            }, 1000);
+        }
+
+        function showMessage(msg) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = msg;
+            messageEl.classList.add('show');
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 2000);
+        }
+
+        function showInstructions() {
+            document.getElementById('instructions-modal').classList.add('show');
+            document.getElementById('overlay').classList.add('show');
+        }
+
+        function hideInstructions() {
+            document.getElementById('instructions-modal').classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        // Function to start a new game
+        function resetGame() {
+            fetch("/reset", {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset game state
+                currentRow = 0;
+                currentTile = 0;
+                gameOver = false;
+                guessedWord = '';
+
+                // Clear board
+                const tiles = document.querySelectorAll('.tile');
+                tiles.forEach(tile => {
+                    tile.textContent = '';
+                    tile.className = 'tile';
+                });
+
+                // Reset keyboard
+                const keys = document.querySelectorAll('.keyboard-button');
+                keys.forEach(key => {
+                    key.className = 'keyboard-button';
+                    if (key.dataset.key === 'enter' || key.dataset.key === 'backspace') {
+                        key.classList.add('wide');
+                    }
+                });
+
+                showMessage("New game started");
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                showMessage("An error occurred");
+            });
+        }
+    </script>
+</body>
+</html>
