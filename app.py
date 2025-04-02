@@ -67,6 +67,9 @@ def reset_game():
     guess_history = []
     return jsonify({"message": "Game reset with new word"})
 
+@app.route('/get-word')
+def get_word():
+    return jsonify({'word': word})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=8000)

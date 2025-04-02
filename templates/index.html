@@ -576,7 +576,11 @@
                     showMessage("You win! 🎉");
                 } else if (currentRow === 5) {
                     gameOver = true;
-                    showMessage("Game over!");
+                    fetch('/get-word')
+        .then(response => response.json())
+        .then(data => {
+            showMessage(`Game over! The word was "${data.word}".`);
+        });
                 } else {
                     currentRow++;
                     currentTile = 0;
