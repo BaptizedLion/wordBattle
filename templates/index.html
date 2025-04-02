@@ -35,7 +35,7 @@
             align-items: center;
             height: 50px;
             border-bottom: 1px solid #d3d6da;
-            margin-bottom: 40px;
+            margin-bottom: 120px;
             padding-top: 30px;
             padding-bottom: 30px;
             padding-left: 90px;
@@ -305,6 +305,38 @@
         .message-container.show {
             opacity: 1;
         }
+
+        .hint-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        .hint-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .hint-message {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .game-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -363,7 +395,11 @@
         <div class="header-button" id="info-button">?</div>
         <h1>Word Battle</h1>
         <button class="reset-button" id="reset-button">New Game</button>
+
+
     </header>
+
+
 
     <div class="game-container">
         <div class="tile-container" id="board">
@@ -408,6 +444,11 @@
                 <button class="keyboard-button wide" data-key="backspace">←</button>
             </div>
         </div>
+
+            <div class="game-controls">
+        <button id="hint-button" class="hint-button">Get Hint</button>
+    </div>
+
     </div>
 
     <script>
@@ -416,6 +457,7 @@
         let currentTile = 0;
         let gameOver = false;
         let guessedWord = '';
+        let hintUsed = false;
 
         // Initialize the game board
         document.addEventListener('DOMContentLoaded', function() {
@@ -428,6 +470,9 @@
 
             // Add reset button listener
             document.getElementById('reset-button').addEventListener('click', resetGame);
+
+            // Add hint button listener
+            document.getElementById('hint-button').addEventListener('click', getHint);
         });
 
         function initializeBoard() {
@@ -577,10 +622,10 @@
                 } else if (currentRow === 5) {
                     gameOver = true;
                     fetch('/get-word')
-        .then(response => response.json())
-        .then(data => {
-            showMessage(`Game over! The word was "${data.word}".`);
-        });
+                        .then(response => response.json())
+                        .then(data => {
+                            showMessage(`Game over! The word was "${data.word}".`);
+                        });
                 } else {
                     currentRow++;
                     currentTile = 0;
@@ -638,12 +683,55 @@
                     }
                 });
 
+                // Reset hint
+                hintUsed = false;
+                document.getElementById('hint-button').disabled = false;
+
+                const hintElement = document.getElementById('hint-message');
+                if (hintElement) {
+                    hintElement.remove();
+                }
+
                 showMessage("New game started");
             })
             .catch(error => {
                 console.error("Error:", error);
                 showMessage("An error occurred");
             });
+        }
+
+        // Function to get and display the hint
+        function getHint() {
+            if (hintUsed || gameOver) {
+                return;
+            }
+
+            fetch('/get-hint')
+                .then(response => response.json())
+                .then(data => {
+                console.log("Hint data received:", data); // Debugging
+                    // Create or update hint message element
+                    let hintElement = document.getElementById('hint-message');
+                    if (!hintElement) {
+                        hintElement = document.createElement('div');
+                        hintElement.id = 'hint-message';
+                        hintElement.className = 'hint-message';
+                        // Insert it after the hint button
+                        const gameControls = document.querySelector('.game-controls');
+                        gameControls.appendChild(hintElement);
+                    }
+
+                    hintElement.textContent = `Hint: ${data.definition}`;
+
+
+                    // Mark hint as used and disable button
+                    hintUsed = true;
+                    document.getElementById('hint-button').disabled = true;
+                })
+                .catch(error => {
+                    console.error('Error fetching hint:', error);
+                    showMessage('Failed to get hint. Try again.');
+                });
         }
     </script>
 </body>

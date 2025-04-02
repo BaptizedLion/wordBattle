@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 import random as rand
 from english_words import get_english_words_set
+import requests
+
+
 
 app = Flask(__name__)
 
@@ -70,6 +73,17 @@ def reset_game():
 @app.route('/get-word')
 def get_word():
     return jsonify({'word': word})
+
+
+@app.route('/get-hint')
+def get_hint():
+    response = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
+    if response.status_code == 200:
+        data = response.json()
+        definition = data[0]["meanings"][0]["definitions"][0]["definition"]
+        return jsonify({'definition': definition})
+    else:
+        return jsonify({'definition': "No definition found."})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=8000)
