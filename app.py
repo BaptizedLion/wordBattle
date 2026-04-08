@@ -1,9 +1,8 @@
-from flask import Flask, request, jsonify, render_template
 import random as rand
-from english_words import get_english_words_set
+
 import requests
-
-
+from english_words import get_english_words_set
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
